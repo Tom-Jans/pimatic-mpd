@@ -93,6 +93,7 @@ module.exports = (env) ->
         env.logger.error(error)
       )
 
+      # Event listener for state changes (Song and state)
       @_client.on("system-player", =>
         return @_updateInfo().catch( (err) =>
           env.logger.error "Error sending mpd command: #{err}"
@@ -100,6 +101,7 @@ module.exports = (env) ->
         )
       )
 
+      # Event listener for mixer changes (Volume)
       @_client.on("system-mixer", =>
         return @_updateInfo().catch( (err) =>
           env.logger.error "Error sending mpd command: #{err}"
@@ -109,8 +111,7 @@ module.exports = (env) ->
 
       super()
 
-    getState: () ->
-      return Promise.resolve @_state
+    getState: () -> return Promise.resolve @_state
 
     getCurrentTitle: () -> Promise.resolve(@_currentTitle)
     getCurrentArtist: () -> Promise.resolve(@_currentTitle)
@@ -124,10 +125,10 @@ module.exports = (env) ->
     _updateInfo: -> Promise.all([@_getStatus(), @_getCurrentSong()])
 
     _setState: (state) ->
-      if @_state isnt state
+      if @_state isnt state 
         @_state = state
         @emit 'state', state
-
+      
     _setCurrentTitle: (title) ->
       if @_currentTitle isnt title
         @_currentTitle = title
@@ -148,7 +149,6 @@ module.exports = (env) ->
         info = mpd.parseKeyValueMessage(msg)
         @_setState(info.state)
         @_setVolume(info.volume)
-        #if info.songid isnt @_currentTrackId
       )
 
     _getCurrentSong: () ->
@@ -168,17 +168,14 @@ module.exports = (env) ->
         )
       )
 
-  # Pause play volume actions
+  # Actions
+
+  # Pause
   class mpdPauseActionProvider extends env.actions.ActionProvider 
   
     constructor: (@framework) -> 
-    # ### executeAction()
-    ###
-    This function handles action in the form of `execute "some string"`
-    ###
-    parseAction: (input, context) =>
 
-      retVar = null
+    parseAction: (input, context) =>
 
       mpdPlayers = _(@framework.deviceManager.devices).values().filter( 
         (device) => device.hasAction("play") 
@@ -218,13 +215,11 @@ module.exports = (env) ->
           @device.pause().then( => __("paused %s", @device.name) )
       )
 
+  # Play
   class mpdPlayActionProvider extends env.actions.ActionProvider 
   
     constructor: (@framework) -> 
-    # ### executeAction()
-    ###
-    This function handles action in the form of `execute "some string"`
-    ###
+
     parseAction: (input, context) =>
 
       retVar = null
@@ -264,19 +259,16 @@ module.exports = (env) ->
         if simulate
           Promise.resolve __("would play %s", @device.name)
         else
-          @device.play().then( => __("paused %s", @device.name) )
+          @device.play().then( => __("Play %s", @device.name) )
       )
 
+  # Volume
   class mpdVolumeActionProvider extends env.actions.ActionProvider 
   
     constructor: (@framework) -> 
-    # ### executeAction()
-    ###
-    This function handles action in the form of `execute "some string"`
-    ###
+
     parseAction: (input, context) =>
 
-      retVar = null
       volume = null
 
       mpdPlayers = _(@framework.deviceManager.devices).values().filter( 
@@ -314,10 +306,10 @@ module.exports = (env) ->
         assert typeof match is "string"
         value = parseFloat(value)
         if value < 0.0
-          context?.addError("Can't dim to a negativ dimlevel.")
+          context?.addError("Can't change to negative volume")
           return
         if value > 100.0
-          context?.addError("Can't dim to greaer than 100%.")
+          context?.addError("Can't change volume to more than 100%.")
           return
         return {
           token: match
@@ -343,17 +335,12 @@ module.exports = (env) ->
           @device.setVolume(val).then( => __("set volume of %s to %s", @device.name, val) )
       )   
 
+  # Next
   class mpdNextActionProvider extends env.actions.ActionProvider 
   
     constructor: (@framework) -> 
-    # ### executeAction()
-    ###
-    This function handles action in the form of `execute "some string"`
-    ###
-    parseAction: (input, context) =>
 
-      retVar = null
-      volume = null
+    parseAction: (input, context) =>
 
       mpdPlayers = _(@framework.deviceManager.devices).values().filter( 
         (device) => device.hasAction("play") 
@@ -362,7 +349,6 @@ module.exports = (env) ->
       if mpdPlayers.length is 0 then return
 
       device = null
-      valueTokens = null
       match = null
 
       onDeviceMatch = ( (m, d) -> device = d; match = m.getFullMatch() )
@@ -394,17 +380,12 @@ module.exports = (env) ->
           @device.next().then( => __("play next track of %s", @device.name) )
       )      
 
+  # Previous
   class mpdPrevActionProvider extends env.actions.ActionProvider 
   
     constructor: (@framework) -> 
-    # ### executeAction()
-    ###
-    This function handles action in the form of `execute "some string"`
-    ###
-    parseAction: (input, context) =>
 
-      retVar = null
-      volume = null
+    parseAction: (input, context) =>
 
       mpdPlayers = _(@framework.deviceManager.devices).values().filter( 
         (device) => device.hasAction("play") 
@@ -413,7 +394,6 @@ module.exports = (env) ->
       if mpdPlayers.length is 0 then return
 
       device = null
-      valueTokens = null
       match = null
 
       onDeviceMatch = ( (m, d) -> device = d; match = m.getFullMatch() )
